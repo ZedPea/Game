@@ -2,8 +2,7 @@
 import SDL
 import SDL.Image
 import qualified SDL.TTF as Font
-import Control.Monad (unless)
-import Data.Time
+import Control.Monad (unless, when)
 import Utilities
 
 main :: IO ()
@@ -14,43 +13,62 @@ main = do
 
     window <- createWindow "" defaultWindow
 
-    screenSurface <- getWindowSurface window
-    surfacePixelFormat <- surfaceFormat screenSurface
+    screenSurface' <- getWindowSurface window
+    screenSize <- surfaceDimensions screenSurface'
+    surfacePixelFormat <- surfaceFormat screenSurface'
 
-    imageSurface <- load "../Assets/background.jpg"
-    optimizedSurface <- convertSurface imageSurface surfacePixelFormat
-    freeSurface imageSurface
+    bgSurface' <- load "../Assets/background.jpg"
+    optimizedBGSurface <- convertSurface bgSurface' surfacePixelFormat
+    freeSurface bgSurface'
 
-    font <- Font.openFont "../Fonts/arial.ttf" fpsCounterFontSize
+    boxSurface' <- load "../Assets/box.jpg"
+    optimizedBoxSurface <- convertSurface boxSurface' surfacePixelFormat
+    freeSurface boxSurface'
+
+    font' <- Font.openFont "../Fonts/arial.ttf" fpsCounterFontSize
+
+    let surfaces = Surfaces screenSurface' optimizedBGSurface optimizedBoxSurface
+
+    startState <- initialState screenSize window font'
+
+    --enter main loop
+    mainLoop startState surfaces
     
-    let mainLoop oldTime lastFPSUpdate = do
-        events <- pollEvents
-        (newTime, fps') <- fps oldTime
-
-        maybeNewFPSUpdateTime <- shouldRun lastFPSUpdate fpsCounterUpdateDelay
-        case maybeNewFPSUpdateTime of
-            Just newFPSUpdateTime -> do
-                fontSurface <- Font.renderUTF8Solid
-                               font
-                               (show (round fps' :: Int))
-                               titaniumWhite
-
-                --only redraw the window if it's time to update fps counter
-                --have to redraw background otherwise fps numbers would collide
-                surfaceBlit optimizedSurface Nothing screenSurface Nothing
-                surfaceBlit fontSurface Nothing screenSurface Nothing
-                freeSurface fontSurface
-
-                updateWindowSurface window
-                unless (windowClosed events)
-                       (mainLoop newTime newFPSUpdateTime)
-
-            Nothing -> unless (windowClosed events)
-                              (mainLoop newTime lastFPSUpdate)
-
-    time' <- getCurrentTime
-    mainLoop time' (addUTCTime (- fpsCounterUpdateDelay) time')
-    
-    freeSurface optimizedSurface
-    freeSurface screenSurface
+    freeSurface optimizedBGSurface
+    freeSurface optimizedBoxSurface
+    freeSurface screenSurface'
     Font.quit
+
+mainLoop :: State -> Surfaces -> IO ()
+mainLoop s surfaces = do
+    events <- pollEvents
+    updateBox s events surfaces
+    newState <- updateFPSCounter s surfaces
+    unless (windowClosed events) (mainLoop newState surfaces)
+
+updateBox :: State -> [Event] -> Surfaces -> IO ()
+updateBox state events s = when (any wasdPressed events) $ do
+    let newPos = moveBox events (boxPosition state)
+    surfaceBlit (bgSurface s) Nothing (screenSurface s) Nothing
+    surfaceBlit (boxSurface s) Nothing (screenSurface s) (Just newPos)
+    updateWindowSurface (mainWindow state)
+
+updateFPSCounter :: State -> Surfaces -> IO State
+updateFPSCounter oldState@(State f boxPos window font') s = do
+    (newTime, fps') <- fps (oldTime f)
+    maybeNewFPSUpdateTime <- shouldRun (lastFPSUpdateTime f) fpsCounterUpdateDelay
+    case maybeNewFPSUpdateTime of
+        Just newFPSUpdateTime -> do
+
+            fontSurface <- Font.renderUTF8Solid font'
+                           (show (round fps' :: Int)) titaniumWhite
+
+            surfaceBlit (bgSurface s) Nothing (screenSurface s) Nothing
+            surfaceBlit (boxSurface s) Nothing (screenSurface s) (Just boxPos)
+            surfaceBlit fontSurface Nothing (screenSurface s) Nothing
+            freeSurface fontSurface
+
+            updateWindowSurface window
+            return $ oldState { fpsState = FPSCounterState newTime newFPSUpdateTime }
+
+        Nothing -> return $ oldState { fpsState = FPSCounterState newTime (lastFPSUpdateTime f) }
