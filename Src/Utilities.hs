@@ -37,7 +37,8 @@ data FPSCounterState = FPSCounterState {
 data Surfaces = Surfaces {
     screenSurface :: Surface,
     bgSurface :: Surface,
-    boxSurface :: Surface
+    boxSurface :: Surface,
+    fontSurface :: Surface
 }
 
 windowClosed :: [Event] -> Bool
@@ -61,17 +62,17 @@ moveBox events oldPos = let movement = filter wasdPressed events
 
 updateBoxPos :: EventPayload -> Point V2 CInt -> Point V2 CInt
 updateBoxPos (KeyboardEvent data') oldPos = case key of
-    ScancodeW -> updatePos oldPos (1 * boxMovementMultiplier) 0
-    ScancodeS -> updatePos oldPos ((-1) * boxMovementMultiplier) 0
-    ScancodeD -> updatePos oldPos 0 (1 * boxMovementMultiplier)
-    ScancodeA -> updatePos oldPos 0 ((-1) * boxMovementMultiplier)
+    ScancodeW -> updatePos oldPos 0 ((-1) * boxMovementMultiplier)
+    ScancodeS -> updatePos oldPos 0 (1 * boxMovementMultiplier)
+    ScancodeD -> updatePos oldPos (1 * boxMovementMultiplier) 0
+    ScancodeA -> updatePos oldPos ((-1) * boxMovementMultiplier) 0
     _ -> error "Internal error - updateBoxPos ScanCode pattern not matched"
     where key = keysymScancode $ keyboardEventKeysym data'
 updateBoxPos _ _ = error "Internal error - updateBoxPos KeyboardEvent pattern\
                          \ not matched"
 
 boxMovementMultiplier :: CInt
-boxMovementMultiplier = 1
+boxMovementMultiplier = 20
 
 updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
