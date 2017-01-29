@@ -2,14 +2,17 @@
 import SDL
 import SDL.Image
 import SDL.TTF as Font
+import Control.Monad
 import Control.Lens
-import Control.Monad (unless)
 import Utilities
+import Update
 
 main :: IO ()
 main = do
     initializeAll
     _ <- Font.init
+
+    refreshRate' <- getMaxRefreshRate <$> getDisplays
 
     window <- createWindow "" defaultWindow
 
@@ -19,13 +22,18 @@ main = do
 
     bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load bgLocation
     boxSurface' <- (`convertSurface` surfacePixelFormat) =<< load boxLocation
+    ballSurface' <- (`convertSurface` surfacePixelFormat) =<< load ballLocation
+    surfaceColorKey ballSurface' $= (Just $ V4 0 0 0 0)
 
     font' <- openFont "../Fonts/arial.ttf" fpsCounterFontSize
     fontSurface' <- renderUTF8Solid font' "0" titaniumWhite
 
     let surfaces' = Surfaces screenSurface' bgSurface' boxSurface' fontSurface'
+                        ballSurface'
+        world' = World window font' (1 / realToFrac refreshRate')
+        positions' = Positions (midpoint screenSize) (midpoint screenSize)
 
-    startState <- initialState screenSize window font' surfaces'
+    startState <- initialState positions' surfaces' world'
 
     mainLoop startState
 
@@ -33,35 +41,5 @@ main = do
 
 mainLoop :: Game -> IO ()
 mainLoop state = do
-    events <- pollEvents
-    newState <- updateFPSCounter =<< updateBox state events
-    unless (windowClosed events) (mainLoop newState)
-
-updateBox :: Game -> [Event] -> IO Game
-updateBox state events
-    | any wasdPressed events = do
-        let newPos = moveBox events $ state^.boxPosition
-        updateScreen state newPos
-        return $ state & boxPosition .~ newPos
-    | otherwise = return state
-
-updateFPSCounter :: Game -> IO Game
-updateFPSCounter state = do
-    (newTime, fps') <- fps $ state^.fpsState.oldTime
-
-    maybeNewFPSUpdateTime <- shouldRun (state^.fpsState.lastFPSUpdateTime)
-                             fpsCounterUpdateDelay
-
-    case maybeNewFPSUpdateTime of
-        Just newFPSUpdateTime -> do
-            fontSurface' <- renderUTF8Solid (state^.font) (show $ round fps')
-                            titaniumWhite
-
-            let newState = state & fpsState .~ FPSCounterState newTime
-                                   newFPSUpdateTime
-                                 & surfaces.fontSurface .~ fontSurface'
-
-            updateScreen newState $ state^.boxPosition
-            return newState
-
-        Nothing -> return $ state & fpsState.oldTime .~ newTime
+    newState <- updateScreen =<< updatePositions state
+    unless (state^.exit) (mainLoop newState)
