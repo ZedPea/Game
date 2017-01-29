@@ -17,19 +17,13 @@ main = do
     screenSize <- surfaceDimensions screenSurface'
     surfacePixelFormat <- surfaceFormat screenSurface'
 
-    bgSurface' <- load "../Assets/background.jpg"
-    optimizedBGSurface <- convertSurface bgSurface' surfacePixelFormat
-    freeSurface bgSurface'
-
-    boxSurface' <- load "../Assets/box.jpg"
-    optimizedBoxSurface <- convertSurface boxSurface' surfacePixelFormat
-    freeSurface boxSurface'
+    bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load bgLocation
+    boxSurface' <- (`convertSurface` surfacePixelFormat) =<< load boxLocation
 
     font' <- openFont "../Fonts/arial.ttf" fpsCounterFontSize
     fontSurface' <- renderUTF8Solid font' "0" titaniumWhite
 
-    let surfaces' = Surfaces screenSurface' optimizedBGSurface
-                             optimizedBoxSurface fontSurface'
+    let surfaces' = Surfaces screenSurface' bgSurface' boxSurface' fontSurface'
 
     startState <- initialState screenSize window font' surfaces'
 
@@ -38,37 +32,36 @@ main = do
     Font.quit
 
 mainLoop :: Game -> IO ()
-mainLoop s = do
+mainLoop state = do
     events <- pollEvents
-    newState <- updateBox s events
-    newState' <- updateFPSCounter newState
-    unless (windowClosed events) (mainLoop newState')
+    newState <- updateFPSCounter =<< updateBox state events
+    unless (windowClosed events) (mainLoop newState)
 
 updateBox :: Game -> [Event] -> IO Game
-updateBox s events
+updateBox state events
     | any wasdPressed events = do
-        let newPos = moveBox events $ s^.boxPosition
-        updateScreen s newPos
-        return $ s & boxPosition .~ newPos
-    | otherwise = return s
+        let newPos = moveBox events $ state^.boxPosition
+        updateScreen state newPos
+        return $ state & boxPosition .~ newPos
+    | otherwise = return state
 
 updateFPSCounter :: Game -> IO Game
-updateFPSCounter s = do
-    (newTime, fps') <- fps $ s^.fpsState.oldTime
+updateFPSCounter state = do
+    (newTime, fps') <- fps $ state^.fpsState.oldTime
 
-    maybeNewFPSUpdateTime <- shouldRun (s^.fpsState.lastFPSUpdateTime)
+    maybeNewFPSUpdateTime <- shouldRun (state^.fpsState.lastFPSUpdateTime)
                              fpsCounterUpdateDelay
 
     case maybeNewFPSUpdateTime of
         Just newFPSUpdateTime -> do
-            fontSurface' <- renderUTF8Solid (s^.font) (show $ round fps')
+            fontSurface' <- renderUTF8Solid (state^.font) (show $ round fps')
                             titaniumWhite
 
-            let newState = s & fpsState .~ FPSCounterState newTime
-                                newFPSUpdateTime
-                             & surfaces.fontSurface .~ fontSurface'
+            let newState = state & fpsState .~ FPSCounterState newTime
+                                   newFPSUpdateTime
+                                 & surfaces.fontSurface .~ fontSurface'
 
-            updateScreen newState $ s^.boxPosition
+            updateScreen newState $ state^.boxPosition
             return newState
 
-        Nothing -> return $ s & fpsState.oldTime .~ newTime
+        Nothing -> return $ state & fpsState.oldTime .~ newTime

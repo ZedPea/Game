@@ -124,3 +124,9 @@ updateScreen s pos = do
     writeToScreenWithPos s boxSurface pos
     writeToScreen s fontSurface
     updateWindowSurface (s^.mainWindow)
+
+bgLocation :: String
+bgLocation = "../Assets/background.jpg"
+
+boxLocation :: String
+boxLocation = "../Assets/box.jpg"
