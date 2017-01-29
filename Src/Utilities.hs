@@ -1,45 +1,36 @@
-module Utilities
-(
-    windowClosed,
-    fps,
-    shouldRun,
-    fpsCounterUpdateDelay,
-    titaniumWhite,
-    fpsCounterFontSize,
-    midpoint,
-    State(..),
-    initialState,
-    moveBox,
-    wasdPressed,
-    Surfaces(..),
-    FPSCounterState(..)
-)
-where
+{-# LANGUAGE TemplateHaskell #-}
+module Utilities where
 
 import Data.Time
 import SDL
 import SDL.TTF.FFI
 import Foreign.C
+import Control.Lens
 import qualified SDL.Raw as Raw
 
-data State = State {
-    fpsState :: FPSCounterState,
-    boxPosition :: Point V2 CInt,
-    mainWindow :: Window,
-    font :: TTFFont
+data Game = Game {
+    _fpsState :: FPSCounterState,
+    _boxPosition :: Point V2 CInt,
+    _mainWindow :: Window,
+    _font :: TTFFont,
+    _surfaces :: Surfaces
 }
 
 data FPSCounterState = FPSCounterState {
-    oldTime :: UTCTime,
-    lastFPSUpdateTime :: UTCTime
+    _oldTime :: UTCTime,
+    _lastFPSUpdateTime :: UTCTime
 }
 
 data Surfaces = Surfaces {
-    screenSurface :: Surface,
-    bgSurface :: Surface,
-    boxSurface :: Surface,
-    fontSurface :: Surface
+    _screenSurface :: Surface,
+    _bgSurface :: Surface,
+    _boxSurface :: Surface,
+    _fontSurface :: Surface
 }
+
+makeLenses ''Game
+makeLenses ''FPSCounterState
+makeLenses ''Surfaces
 
 windowClosed :: [Event] -> Bool
 windowClosed [] = False
@@ -107,9 +98,29 @@ fpsCounterFontSize = 32
 midpoint :: (Integral a) => V2 a -> Point V2 a
 midpoint (V2 x y) = P $ V2 (x `div` 2) (y `div` 2)
 
-initialState :: V2 CInt -> Window -> TTFFont -> IO State
-initialState (V2 x y) window' font' = do
+initialState :: V2 CInt -> Window -> TTFFont -> Surfaces -> IO Game
+initialState dimensions window font' surfaces' = do
     time' <- getCurrentTime
-    let lastFpsUpdate' = addUTCTime (- fpsCounterUpdateDelay) time'
-        boxPos = P $ V2 (x `div` 2) (y `div` 2)
-    return $ State (FPSCounterState time' lastFpsUpdate') boxPos window' font'
+    let lastFPSUpdate = addUTCTime (-fpsCounterUpdateDelay) time'
+        boxPos = midpoint dimensions
+        fpsState' = FPSCounterState time' lastFPSUpdate
+    return $ Game fpsState' boxPos window font' surfaces'
+
+writeToScreen :: Game -> ((Surface -> Const Surface Surface) -> Surfaces
+                      -> Const Surface Surfaces) -> IO ()
+writeToScreen s source = surfaceBlit (s^.surfaces.source) Nothing
+                         (s^.surfaces.screenSurface) Nothing
+
+--have type signatures gone too far?
+writeToScreenWithPos :: Game -> ((Surface -> Const Surface Surface)
+                             -> Surfaces -> Const Surface Surfaces)
+                             -> Point V2 CInt -> IO ()
+writeToScreenWithPos s source pos = surfaceBlit (s^.surfaces.source) Nothing
+                                    (s^.surfaces.screenSurface) (Just pos)
+
+updateScreen :: Game -> Point V2 CInt -> IO ()
+updateScreen s pos = do
+    writeToScreen s bgSurface 
+    writeToScreenWithPos s boxSurface pos
+    writeToScreen s fontSurface
+    updateWindowSurface (s^.mainWindow)
