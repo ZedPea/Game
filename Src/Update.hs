@@ -7,29 +7,25 @@ import Control.Lens
 import Foreign.C
 import Data.Time
 
-updateBoxPos :: EventPayload -> Point V2 CInt -> Point V2 CInt
-updateBoxPos (KeyboardEvent data') oldPos = case key of
-    ScancodeW -> updatePos oldPos 0 ((-1) * boxMovementMultiplier)
-    ScancodeS -> updatePos oldPos 0 (1 * boxMovementMultiplier)
-    ScancodeD -> updatePos oldPos (1 * boxMovementMultiplier) 0
-    ScancodeA -> updatePos oldPos ((-1) * boxMovementMultiplier) 0
-    _ -> error "Internal error - updateBoxPos ScanCode pattern not matched"
-    where key = keysymScancode $ keyboardEventKeysym data'
-updateBoxPos _ _ = error "Internal error - updateBoxPos KeyboardEvent pattern\
-                         \ not matched"
+updateBoxPos :: Point V2 CInt -> Point V2 CInt
+updateBoxPos oldPos = updatePos oldPos 0 $ (-1) * boxMovementMultiplier
 
 moveBox :: [Event] -> Point V2 CInt -> Point V2 CInt
-moveBox events oldPos = let movement = filter wasdPressed events
-                        in  moveBox' (map eventPayload movement) oldPos
-    where moveBox' [] finalPos = finalPos
-          moveBox' (x:xs) oldPos' = moveBox' xs (updateBoxPos x oldPos')
+moveBox events = myRepeat upEvents updateBoxPos
+    where upEvents = length $ filter (`keysPressed` upKeys) events
+
+--give this a better name / find if there's a library function
+myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
+myRepeat 0 _ final = final
+myRepeat n f old = let new = f old
+                   in  myRepeat (n-1) f new 
 
 updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
 
 updateBox :: Game -> [Event] -> IO Game
 updateBox state events
-    | any wasdPressed events = do
+    | any (`keysPressed` upKeys) events = do
         let newPos = moveBox events $ state^.positions.boxPosition
         return $ state & positions.boxPosition .~ newPos
     | otherwise = return state

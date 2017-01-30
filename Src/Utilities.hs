@@ -67,11 +67,11 @@ windowClosed (x:xs) = case eventPayload x of
     WindowClosedEvent _ -> True
     _ -> windowClosed xs
 
-wasdPressed :: Event -> Bool
-wasdPressed event = case eventPayload event of
+keysPressed :: Event -> [Scancode] -> Bool
+keysPressed event keys = case eventPayload event of
     KeyboardEvent keyboardEvent ->
         keyboardEventKeyMotion keyboardEvent == Pressed &&
-        keysymScancode (keyboardEventKeysym keyboardEvent) `elem` wasd
+        keysymScancode (keyboardEventKeysym keyboardEvent) `elem` keys
     _ -> False
 
 boxMovementMultiplier :: CInt
@@ -79,6 +79,9 @@ boxMovementMultiplier = 20
 
 wasd :: [Scancode]
 wasd = [ScancodeW, ScancodeA, ScancodeS, ScancodeD]
+
+upKeys :: [Scancode]
+upKeys = [ScancodeW, ScancodeUp]
 
 fps :: UTCTime -> IO (UTCTime, Double)
 fps oldTime' = do
