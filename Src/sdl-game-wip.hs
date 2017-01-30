@@ -22,16 +22,13 @@ main = do
 
     bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load bgLocation
     boxSurface' <- (`convertSurface` surfacePixelFormat) =<< load boxLocation
-    ballSurface' <- (`convertSurface` surfacePixelFormat) =<< load ballLocation
-    surfaceColorKey ballSurface' $= (Just $ V4 0 0 0 0)
 
     font' <- openFont "../Fonts/arial.ttf" fpsCounterFontSize
     fontSurface' <- renderUTF8Solid font' "0" titaniumWhite
 
     let surfaces' = Surfaces screenSurface' bgSurface' boxSurface' fontSurface'
-                        ballSurface'
         world' = World window font' (1 / realToFrac refreshRate')
-        positions' = Positions (midpoint screenSize) (midpoint screenSize)
+        positions' = Positions (midpoint screenSize)
 
     startState <- initialState positions' surfaces' world'
 

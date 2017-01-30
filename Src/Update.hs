@@ -7,13 +7,6 @@ import Control.Lens
 import Foreign.C
 import Data.Time
 
-updateBoxPos :: Point V2 CInt -> Point V2 CInt
-updateBoxPos oldPos = updatePos oldPos 0 $ (-1) * boxMovementMultiplier
-
-moveBox :: [Event] -> Point V2 CInt -> Point V2 CInt
-moveBox events = myRepeat upEvents updateBoxPos
-    where upEvents = length $ filter (`keysPressed` upKeys) events
-
 --give this a better name / find if there's a library function
 myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
 myRepeat 0 _ final = final
@@ -24,16 +17,25 @@ updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
 
 updateBox :: Game -> [Event] -> IO Game
-updateBox state events
-    | any (`keysPressed` upKeys) events = do
-        let newPos = moveBox events $ state^.positions.boxPosition
-        return $ state & positions.boxPosition .~ newPos
-    | otherwise = return state
+updateBox state events = do
+    let newState = moveDown state
+    if not $ null upEvents
+        then return $ moveBox events newState
+        else return newState
+    where upEvents = filter (`keysPressed` upKeys) events
 
-updateBall :: Game -> IO Game
-updateBall state = return $ state & positions.ballPosition .~ newPos 
-    where newPos = updatePos (state^.positions.ballPosition) 1 1
-    
+moveBox :: [Event] -> Game -> Game
+moveBox events = myRepeat (length events) moveUp
+
+moveDown :: Game -> Game
+moveDown state = state & positions.boxPosition .~ newPos
+    where newPos = updatePos (state^.positions.boxPosition) 0 1
+
+moveUp :: Game -> Game
+moveUp state = state & positions.boxPosition .~ newPos
+    where newPos = updatePos (state^.positions.boxPosition) 0
+                    (-1 * boxMovementMultiplier)
+
 updateFPSCounter :: Game -> IO Game
 updateFPSCounter state = do
     (newTime, fps') <- fps $ state^.fpsState.oldTime
@@ -64,8 +66,6 @@ updateScreen state = do
             writeToScreen state bgSurface 
             writeToScreenWithPos state boxSurface
                 (state^.positions.boxPosition)
-            writeToScreenWithPos state ballSurface
-                (state^.positions.ballPosition)
             writeToScreen state fontSurface
             updateWindowSurface (state^.world.mainWindow)
             newState <- updateFPSCounter state
@@ -86,12 +86,11 @@ writeToScreenWithPos s source pos = surfaceBlit (s^.surfaces.source) Nothing
 updatePositions :: Game -> IO Game
 updatePositions state = do
     newTime <- getCurrentTime
+    let updateTime x = x & lastUpdateTime .~ newTime
     if addUTCTime movementDelay (state^.lastUpdateTime) >= newTime
         then return state
         else do
             events <- pollEvents
             if windowClosed events
                 then return $ state & exit .~ True
-                else do
-                    let updateTime x = x & lastUpdateTime .~ newTime
-                    updateTime <$> ((`updateBox` events) =<< updateBall state)
+                else updateTime <$> updateBox state events

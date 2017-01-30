@@ -27,8 +27,7 @@ data Surfaces = Surfaces {
     _screenSurface :: Surface,
     _bgSurface :: Surface,
     _boxSurface :: Surface,
-    _fontSurface :: Surface,
-    _ballSurface :: Surface
+    _fontSurface :: Surface
 }
 
 data World = World {
@@ -38,8 +37,7 @@ data World = World {
 }
 
 data Positions = Positions {
-    _boxPosition :: Point V2 CInt,
-    _ballPosition :: Point V2 CInt
+    _boxPosition :: Point V2 CInt
 }
 
 makeLenses ''Game
@@ -75,10 +73,7 @@ keysPressed event keys = case eventPayload event of
     _ -> False
 
 boxMovementMultiplier :: CInt
-boxMovementMultiplier = 20
-
-wasd :: [Scancode]
-wasd = [ScancodeW, ScancodeA, ScancodeS, ScancodeD]
+boxMovementMultiplier = 30
 
 upKeys :: [Scancode]
 upKeys = [ScancodeW, ScancodeUp]
@@ -119,9 +114,6 @@ bgLocation = "../Assets/background.jpg"
 
 boxLocation :: String
 boxLocation = "../Assets/box.jpg"
-
-ballLocation :: String
-ballLocation = "../Assets/ball.png"
 
 getPrimaryDisplay :: [Display] -> Maybe Display
 getPrimaryDisplay [] = Nothing
