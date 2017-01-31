@@ -94,8 +94,13 @@ writeScore state = do
     fontSurface' <- renderUTF8Solid (state^.world.font)
                     ("Score: " ++ show (state^.score)) titaniumWhite
     surfaceBlit fontSurface' Nothing (state^.surfaces.screenSurface) (Just pos)
-    where pos = P $ V2 (690 - lengthDiff) 0
-          lengthDiff = 18 * fromIntegral (length . show $ state^.score)
+    where pos = P $ V2 (startPos - lengthDiff) 0
+          --as the score grows in digits, draw it so the score doesn't clip
+          --of the edge
+          lengthDiff = charLength * fromIntegral (length . show $ state^.score)
+          startPos = (state^.world.screenWidth) - 110
+          --amount of pixels one character in the score counter takes
+          charLength = 18
 
 writeBlocks :: Game -> IO ()
 writeBlocks state = do
@@ -114,10 +119,31 @@ updatePositions state = do
             events <- pollEvents
             if windowClosed events
                 then return $ state & exit .~ True
-                else return . updateTime . updateBlocks $ updateBox state events
+                else updateBlocks . updateTime $ updateBox state events
 
-updateBlocks :: Game -> Game
-updateBlocks state = state & (upBlocks.traversed.position) %~
+updateBlocks :: Game -> IO Game
+updateBlocks state = do
+    (newUp, newDown) <- addAndRemoveBlocks state (newState^.upBlocks) (newState^.downBlocks)
+    return $ newState & upBlocks .~ newUp
+             & downBlocks .~ newDown
+    where newState = state & (upBlocks.traversed.position) %~
                                 (\x -> updatePos x (-1) 0)
                            & (downBlocks.traversed.position) %~
                                 (\x -> updatePos x (-1) 0)
+
+addAndRemoveBlocks :: Game -> [Block] -> [Block] -> IO ([Block], [Block])
+addAndRemoveBlocks state up down
+    | x <= -blockWidth = addBlocks state (tail up) (tail down)
+    | otherwise = return (up, down)
+    where firstUp = head up
+          (P (V2 x _)) = firstUp^.position
+
+addBlocks :: Game -> [Block] -> [Block] -> IO ([Block], [Block])
+addBlocks state up down = do
+    height <- randomBlockHeight
+    height2 <- randomBlockHeight
+    let newUp = makeBlock (state^.world) height x' True
+    let newDown = makeBlock (state^.world) height2 x' False
+    return (up ++ [newUp], down ++ [newDown])
+    where (P (V2 x _)) = last up^.position
+          x' = x + blockWidth

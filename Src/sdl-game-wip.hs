@@ -19,7 +19,7 @@ main = do
     window <- createWindow "" defaultWindow
 
     screenSurface' <- getWindowSurface window
-    screenSize <- surfaceDimensions screenSurface'
+    screenSize@(V2 width height) <- surfaceDimensions screenSurface'
     surfacePixelFormat <- surfaceFormat screenSurface'
 
     bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load bgLocation
@@ -32,7 +32,7 @@ main = do
 
     let surfaces' = Surfaces screenSurface' bgSurface' boxSurface' fontSurface'
                              blockSurface'
-        world' = World window font' (1 / realToFrac refreshRate')
+        world' = World window font' (1 / realToFrac refreshRate') width height
 
     startState <- initialState (midpoint screenSize) surfaces' world'
 
@@ -50,8 +50,8 @@ initialState heliPosition' surfaces' world' = do
     time' <- getCurrentTime
     let lastFPSUpdate = addUTCTime (-fpsCounterUpdateDelay) time'
         fpsState' = FPSCounterState time' lastFPSUpdate
-    upBlocks' <- genBlocks True
-    downBlocks' <- genBlocks False
+    upBlocks' <- genBlocks True world'
+    downBlocks' <- genBlocks False world'
     return $ Game fpsState'
                   world'
                   surfaces'
@@ -63,17 +63,15 @@ initialState heliPosition' surfaces' world' = do
                   0
                   False
 
-genBlocks :: Bool -> IO [Block]
-genBlocks up = genBlocks' 20 []
-    where genBlocks' (-1) final = return final
+genBlocks :: Bool -> World -> IO [Block]
+genBlocks up world' = genBlocks' neededBlocks []
+    {- 1 more block than width, so as they slide off the screen they don't 
+    teleport on / off the screen -}
+    where neededBlocks = 1 + (world'^.screenWidth) `div` blockWidth
+          genBlocks' (-1) final = return final
           genBlocks' n x = do
             block'' <- block' n
             genBlocks' (n-1) (block'' : x)
           block' n = do
             height <- randomBlockHeight
-            if up
-                then return $ Block (makeRectangle height)
-                                    (P $ V2 (n*blockWidth)
-                                    (600 - height))
-                else return $ Block (makeRectangle height)
-                                    (P $ V2 (n*blockWidth) 0)
+            return $ makeBlock world' height (n*blockWidth) up

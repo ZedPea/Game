@@ -38,7 +38,9 @@ data Surfaces = Surfaces {
 data World = World {
     _mainWindow :: Window,
     _font :: TTFFont,
-    _refreshRate :: NominalDiffTime
+    _refreshRate :: NominalDiffTime,
+    _screenWidth :: CInt,
+    _screenHeight :: CInt
 }
 
 data Block = Block {
@@ -151,3 +153,8 @@ myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
 myRepeat 0 _ final = final
 myRepeat n f old = let new = f old
                    in  myRepeat (n-1) f new 
+
+makeBlock :: World -> CInt -> CInt -> Bool -> Block
+makeBlock world' height startWidth up
+    | up = Block (makeRectangle height) (P $ V2 startWidth ((world'^.screenHeight) - height))
+    | otherwise = Block (makeRectangle height) (P $ V2 startWidth 0)
