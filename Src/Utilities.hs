@@ -6,13 +6,16 @@ import SDL
 import SDL.TTF.FFI
 import Foreign.C
 import Control.Lens
+import System.Random
 import qualified SDL.Raw as Raw
 
 data Game = Game {
     _fpsState :: FPSCounterState,
     _world :: World,
     _surfaces :: Surfaces,
-    _positions :: Positions,
+    _upBlocks :: [Block],
+    _downBlocks :: [Block],
+    _heliPosition :: Point V2 CInt,
     _lastUpdateTime :: UTCTime,
     _lastScreenUpdateTime :: UTCTime,
     _exit :: Bool
@@ -27,7 +30,8 @@ data Surfaces = Surfaces {
     _screenSurface :: Surface,
     _bgSurface :: Surface,
     _boxSurface :: Surface,
-    _fontSurface :: Surface
+    _fontSurface :: Surface,
+    _blockSurface :: Surface
 }
 
 data World = World {
@@ -36,28 +40,31 @@ data World = World {
     _refreshRate :: NominalDiffTime
 }
 
-data Positions = Positions {
-    _boxPosition :: Point V2 CInt
+data Block = Block {
+    _size :: Rectangle CInt,
+    _position :: Point V2 CInt
 }
 
 makeLenses ''Game
 makeLenses ''FPSCounterState
 makeLenses ''Surfaces
 makeLenses ''World
-makeLenses ''Positions
+makeLenses ''Block
 
-initialState :: Positions -> Surfaces -> World -> IO Game
-initialState positions' surfaces' world' = do
-    time' <- getCurrentTime
-    let lastFPSUpdate = addUTCTime (-fpsCounterUpdateDelay) time'
-        fpsState' = FPSCounterState time' lastFPSUpdate
-    return $ Game fpsState'
-                  world'
-                  surfaces'
-                  positions'
-                  time'
-                  time'
-                  False
+randomBlockHeight :: IO CInt
+randomBlockHeight = getStdRandom (randomR (minHeight'', maxHeight''))
+
+makeRectangle :: CInt -> Rectangle CInt
+makeRectangle x = Rectangle (P $ V2 0 0) (V2 blockWidth x)
+
+minHeight'' :: (Num a) => a
+minHeight'' = 100
+
+maxHeight'' :: (Num a) => a
+maxHeight'' = 250
+
+blockWidth :: CInt
+blockWidth = 40
 
 windowClosed :: [Event] -> Bool
 windowClosed [] = False
@@ -115,6 +122,9 @@ bgLocation = "../Assets/background.jpg"
 boxLocation :: String
 boxLocation = "../Assets/box.jpg"
 
+blockLocation :: String
+blockLocation = "../Assets/block.jpg"
+
 getPrimaryDisplay :: [Display] -> Maybe Display
 getPrimaryDisplay [] = Nothing
 getPrimaryDisplay (x:xs)
@@ -134,3 +144,9 @@ highestRefreshRate display = maximum refreshRates
           currentRes x = displayModeSize x == resolution
           validDisplayModes = filter currentRes $ displayModes display
           refreshRates = map displayModeRefreshRate validDisplayModes
+
+--give this a better name / find if there's a library function
+myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
+myRepeat 0 _ final = final
+myRepeat n f old = let new = f old
+                   in  myRepeat (n-1) f new 

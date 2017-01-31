@@ -19,6 +19,6 @@ executable sdl-game-wip
   main-is:             sdl-game-wip.hs
   -- other-modules:       
   other-extensions:    TemplateHaskell
-  build-depends:       base >=4.9 && <4.10, sdl2 >=2.1 && <2.2, sdl2-ttf >=1.0 && <1.1, lens >=4.15 && <4.16, time >=1.6 && <1.7, sdl2-image
+  build-depends:       base >=4.9 && <4.10, sdl2 >=2.1 && <2.2, sdl2-ttf >=1.0 && <1.1, lens >=4.15 && <4.16, time >=1.6 && <1.7, sdl2-image, random
   -- hs-source-dirs:      
   default-language:    Haskell2010

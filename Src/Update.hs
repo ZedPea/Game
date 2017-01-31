@@ -7,12 +7,6 @@ import Control.Lens
 import Foreign.C
 import Data.Time
 
---give this a better name / find if there's a library function
-myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
-myRepeat 0 _ final = final
-myRepeat n f old = let new = f old
-                   in  myRepeat (n-1) f new 
-
 updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
 
@@ -28,12 +22,12 @@ moveBox :: [Event] -> Game -> Game
 moveBox events = myRepeat (length events) moveUp
 
 moveDown :: Game -> Game
-moveDown state = state & positions.boxPosition .~ newPos
-    where newPos = updatePos (state^.positions.boxPosition) 0 1
+moveDown state = state & heliPosition .~ newPos
+    where newPos = updatePos (state^.heliPosition) 0 1
 
 moveUp :: Game -> Game
-moveUp state = state & positions.boxPosition .~ newPos
-    where newPos = updatePos (state^.positions.boxPosition) 0
+moveUp state = state & heliPosition .~ newPos
+    where newPos = updatePos (state^.heliPosition) 0
                     (-1 * boxMovementMultiplier)
 
 updateFPSCounter :: Game -> IO Game
@@ -64,9 +58,10 @@ updateScreen state = do
         then return state
         else do
             writeToScreen state bgSurface 
-            writeToScreenWithPos state boxSurface
-                (state^.positions.boxPosition)
+            writeToScreenWithPos state boxSurface (state^.heliPosition)
+            writeBlocks state
             writeToScreen state fontSurface
+
             updateWindowSurface (state^.world.mainWindow)
             newState <- updateFPSCounter state
             return $ newState & lastScreenUpdateTime .~ newTime
@@ -76,12 +71,27 @@ writeToScreen :: Game -> ((Surface -> Const Surface Surface) -> Surfaces
 writeToScreen s source = surfaceBlit (s^.surfaces.source) Nothing
                          (s^.surfaces.screenSurface) Nothing
 
---have type signatures gone too far?
 writeToScreenWithPos :: Game -> ((Surface -> Const Surface Surface)
                              -> Surfaces -> Const Surface Surfaces)
                              -> Point V2 CInt -> IO ()
 writeToScreenWithPos s source pos = surfaceBlit (s^.surfaces.source) Nothing
                                     (s^.surfaces.screenSurface) (Just pos)
+
+--have type signatures gone too far?
+writeToScreenBothPos :: Game -> ((Surface -> Const Surface Surface)
+                             -> Surfaces -> Const Surface Surfaces)
+                             -> Rectangle CInt -> Point V2 CInt -> IO ()
+writeToScreenBothPos s source pos1 pos2 = surfaceBlit (s^.surfaces.source)
+                                        (Just pos1)
+                                        (s^.surfaces.screenSurface)
+                                        (Just pos2)
+
+writeBlocks :: Game -> IO ()
+writeBlocks state = do
+    mapM_ (\x -> writeToScreenBothPos state blockSurface
+          (x^.size) (x^.position)) (state^.upBlocks)
+    mapM_ (\x -> writeToScreenBothPos state blockSurface
+          (x^.size) (x^.position)) (state^.downBlocks)
 
 updatePositions :: Game -> IO Game
 updatePositions state = do
