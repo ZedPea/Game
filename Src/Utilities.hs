@@ -18,6 +18,7 @@ data Game = Game {
     _heliPosition :: Point V2 CInt,
     _lastUpdateTime :: UTCTime,
     _lastScreenUpdateTime :: UTCTime,
+    _score :: Int,
     _exit :: Bool
 }
 

@@ -60,6 +60,7 @@ initialState heliPosition' surfaces' world' = do
                   heliPosition'
                   time'
                   time'
+                  0
                   False
 
 genBlocks :: Bool -> IO [Block]

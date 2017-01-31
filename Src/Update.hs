@@ -10,13 +10,12 @@ import Data.Time
 updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
 
-updateBox :: Game -> [Event] -> IO Game
-updateBox state events = do
-    let newState = moveDown state
-    if not $ null upEvents
-        then return $ moveBox events newState
-        else return newState
-    where upEvents = filter (`keysPressed` upKeys) events
+updateBox :: Game -> [Event] -> Game
+updateBox state events
+    | not $ null upEvents = moveBox events newState
+    | otherwise = newState
+    where newState = moveDown state
+          upEvents = filter (`keysPressed` upKeys) events
 
 moveBox :: [Event] -> Game -> Game
 moveBox events = myRepeat (length events) moveUp
@@ -40,7 +39,7 @@ updateFPSCounter state = do
     case maybeNewFPSUpdateTime of
         Just newFPSUpdateTime -> do
             fontSurface' <- renderUTF8Solid (state^.world.font)
-                            (show $ round fps') titaniumWhite
+                            ("FPS: " ++ show (round fps')) titaniumWhite
 
             let newState = state & fpsState .~ FPSCounterState newTime
                                    newFPSUpdateTime
@@ -49,6 +48,9 @@ updateFPSCounter state = do
             return newState
 
         Nothing -> return $ state & fpsState.oldTime .~ newTime
+
+updateScore :: Game -> Game
+updateScore state = state & score +~ 1
 
 updateScreen :: Game -> IO Game
 updateScreen state = do
@@ -60,10 +62,11 @@ updateScreen state = do
             writeToScreen state bgSurface 
             writeToScreenWithPos state boxSurface (state^.heliPosition)
             writeBlocks state
+            writeScore state
             writeToScreen state fontSurface
 
             updateWindowSurface (state^.world.mainWindow)
-            newState <- updateFPSCounter state
+            newState <- updateScore <$> updateFPSCounter state
             return $ newState & lastScreenUpdateTime .~ newTime
 
 writeToScreen :: Game -> ((Surface -> Const Surface Surface) -> Surfaces
@@ -86,6 +89,14 @@ writeToScreenBothPos s source pos1 pos2 = surfaceBlit (s^.surfaces.source)
                                         (s^.surfaces.screenSurface)
                                         (Just pos2)
 
+writeScore :: Game -> IO ()
+writeScore state = do
+    fontSurface' <- renderUTF8Solid (state^.world.font)
+                    ("Score: " ++ show (state^.score)) titaniumWhite
+    surfaceBlit fontSurface' Nothing (state^.surfaces.screenSurface) (Just pos)
+    where pos = P $ V2 (690 - lengthDiff) 0
+          lengthDiff = 18 * fromIntegral (length . show $ state^.score)
+
 writeBlocks :: Game -> IO ()
 writeBlocks state = do
     mapM_ (\x -> writeToScreenBothPos state blockSurface
@@ -103,4 +114,10 @@ updatePositions state = do
             events <- pollEvents
             if windowClosed events
                 then return $ state & exit .~ True
-                else updateTime <$> updateBox state events
+                else return . updateTime . updateBlocks $ updateBox state events
+
+updateBlocks :: Game -> Game
+updateBlocks state = state & (upBlocks.traversed.position) %~
+                                (\x -> updatePos x (-1) 0)
+                           & (downBlocks.traversed.position) %~
+                                (\x -> updatePos x (-1) 0)
