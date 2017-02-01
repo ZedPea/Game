@@ -2,8 +2,8 @@
 import SDL
 import SDL.Image
 import SDL.TTF as Font
-import Control.Monad
 import Control.Lens
+import Control.Monad
 import Utilities
 import Update
 import Foreign.C
@@ -19,31 +19,62 @@ main = do
     window <- createWindow "" defaultWindow
 
     screenSurface' <- getWindowSurface window
-    screenSize@(V2 width height) <- surfaceDimensions screenSurface'
+    screenSize'@(V2 width height) <- surfaceDimensions screenSurface'
     surfacePixelFormat <- surfaceFormat screenSurface'
 
     bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load bgLocation
     boxSurface' <- (`convertSurface` surfacePixelFormat) =<< load boxLocation
     blockSurface' <- (`convertSurface` surfacePixelFormat)
                   =<< load blockLocation
+    menuBGSurface' <- load menuBGLocation
+    deadBGSurface' <- load deadBGLocation
 
     font' <- openFont "../Fonts/arial.ttf" fpsCounterFontSize
     fontSurface' <- renderUTF8Solid font' "0" titaniumWhite
 
     let surfaces' = Surfaces screenSurface' bgSurface' boxSurface' fontSurface'
-                             blockSurface'
+                             blockSurface' menuBGSurface' deadBGSurface'
         world' = World window font' (1 / realToFrac refreshRate') width height
+                       screenSize'
 
-    startState <- initialState (midpoint screenSize) surfaces' world'
+    startState <- initialState (midpoint screenSize') surfaces' world'
 
-    mainLoop startState
+    writeStaticScreen startState menuBGSurface menuMessage
 
-    Font.quit
+    exit' <- menuLoop startState
+    unless exit' $ do
+        mainLoop startState
+
+        Font.quit
+        SDL.quit
 
 mainLoop :: Game -> IO ()
 mainLoop state = do
     newState <- updateScreen =<< updatePositions state
-    unless (state^.exit) (mainLoop newState)
+    unless (newState^.exit) $
+        if newState^.dead
+            then do
+                writeStaticScreen newState deadBGSurface deadMessage
+                deadLoop newState
+            else mainLoop newState
+
+deadLoop :: Game -> IO ()
+deadLoop state = do
+    events <- pollEvents
+    if any (`keysPressed` startKeys) events
+        then do
+            newState <- reInit state
+            mainLoop newState
+        else unless (any (`keysPressed` quitKeys) events) $ deadLoop state
+
+menuLoop :: Game -> IO Bool
+menuLoop state = do
+    events <- pollEvents
+    if any (`keysPressed` startKeys) events
+        then return False
+        else if windowClosed events
+            then return True
+            else menuLoop state
 
 initialState :: Point V2 CInt -> Surfaces -> World -> IO Game
 initialState heliPosition' surfaces' world' = do
@@ -62,6 +93,7 @@ initialState heliPosition' surfaces' world' = do
                   time'
                   0
                   False
+                  False
 
 genBlocks :: Bool -> World -> IO [Block]
 genBlocks up world' = genBlocks' neededBlocks []
@@ -75,3 +107,7 @@ genBlocks up world' = genBlocks' neededBlocks []
           block' n = do
             height <- randomBlockHeight
             return $ makeBlock world' height (n*blockWidth) up
+
+reInit :: Game -> IO Game
+reInit state = initialState (midpoint (state^.world.screenSize))
+                            (state^.surfaces) (state^.world)

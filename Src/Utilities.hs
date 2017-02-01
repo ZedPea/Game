@@ -19,6 +19,7 @@ data Game = Game {
     _lastUpdateTime :: UTCTime,
     _lastScreenUpdateTime :: UTCTime,
     _score :: Int,
+    _dead :: Bool,
     _exit :: Bool
 }
 
@@ -32,7 +33,9 @@ data Surfaces = Surfaces {
     _bgSurface :: Surface,
     _boxSurface :: Surface,
     _fontSurface :: Surface,
-    _blockSurface :: Surface
+    _blockSurface :: Surface,
+    _menuBGSurface :: Surface,
+    _deadBGSurface :: Surface
 }
 
 data World = World {
@@ -40,7 +43,8 @@ data World = World {
     _font :: TTFFont,
     _refreshRate :: NominalDiffTime,
     _screenWidth :: CInt,
-    _screenHeight :: CInt
+    _screenHeight :: CInt,
+    _screenSize :: V2 CInt
 }
 
 data Block = Block {
@@ -88,6 +92,12 @@ boxMovementMultiplier = 30
 upKeys :: [Scancode]
 upKeys = [ScancodeW, ScancodeUp]
 
+startKeys :: [Scancode]
+startKeys = [ScancodeReturn]
+
+quitKeys :: [Scancode]
+quitKeys = [ScancodeQ]
+
 fps :: UTCTime -> IO (UTCTime, Double)
 fps oldTime' = do
     newTime <- getCurrentTime
@@ -128,6 +138,12 @@ boxLocation = "../Assets/box.jpg"
 blockLocation :: String
 blockLocation = "../Assets/block.jpg"
 
+menuBGLocation :: String
+menuBGLocation = "../Assets/menuBG.jpg"
+
+deadBGLocation :: String
+deadBGLocation = "../Assets/deadBG.jpg"
+
 getPrimaryDisplay :: [Display] -> Maybe Display
 getPrimaryDisplay [] = Nothing
 getPrimaryDisplay (x:xs)
@@ -158,3 +174,18 @@ makeBlock :: World -> CInt -> CInt -> Bool -> Block
 makeBlock world' height startWidth up
     | up = Block (makeRectangle height) (P $ V2 startWidth ((world'^.screenHeight) - height))
     | otherwise = Block (makeRectangle height) (P $ V2 startWidth 0)
+
+deadMessage :: String
+deadMessage = "You died! Hit enter to play again, or q to quit."
+
+menuMessage :: String
+menuMessage = "Hit enter to start the game!"
+
+charLength :: CInt
+charLength = 13
+
+charHeight :: CInt
+charHeight = 20
+
+scoreWhiteSpace :: CInt
+scoreWhiteSpace = 18

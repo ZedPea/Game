@@ -6,6 +6,7 @@ import SDL.TTF
 import Control.Lens
 import Foreign.C
 import Data.Time
+import Data.List
 
 updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
@@ -97,10 +98,10 @@ writeScore state = do
     where pos = P $ V2 (startPos - lengthDiff) 0
           --as the score grows in digits, draw it so the score doesn't clip
           --of the edge
-          lengthDiff = charLength * fromIntegral (length . show $ state^.score)
+          lengthDiff = scoreWhiteSpace * fromIntegral
+                                         (length . show $ state^.score)
           startPos = (state^.world.screenWidth) - 110
           --amount of pixels one character in the score counter takes
-          charLength = 18
 
 writeBlocks :: Game -> IO ()
 writeBlocks state = do
@@ -123,7 +124,8 @@ updatePositions state = do
 
 updateBlocks :: Game -> IO Game
 updateBlocks state = do
-    (newUp, newDown) <- addAndRemoveBlocks state (newState^.upBlocks) (newState^.downBlocks)
+    (newUp, newDown) <- addAndRemoveBlocks state (newState^.upBlocks)
+                                                 (newState^.downBlocks)
     return $ newState & upBlocks .~ newUp
              & downBlocks .~ newDown
     where newState = state & (upBlocks.traversed.position) %~
@@ -147,3 +149,15 @@ addBlocks state up down = do
     return (up ++ [newUp], down ++ [newDown])
     where (P (V2 x _)) = last up^.position
           x' = x + blockWidth
+
+writeStaticScreen :: Game -> ((Surface -> Const Surface Surface) -> Surfaces
+                          -> Const Surface Surfaces) -> String -> IO ()
+writeStaticScreen state source message = do
+    writeToScreen state source
+    fontSurface' <- renderUTF8Solid (state^.world.font) message titaniumWhite
+    surfaceBlit fontSurface' Nothing (state^.surfaces.screenSurface) (Just pos)
+    updateWindowSurface (state^.world.mainWindow)
+    where pos = P $ V2 xOffset yOffset
+          msgLength = charLength * genericLength message 
+          xOffset = ((state^.world.screenWidth) `div` 2) - (msgLength `div` 2)
+          yOffset = ((state^.world.screenHeight) `div` 2) - charHeight
