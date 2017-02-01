@@ -31,13 +31,13 @@ Move to the directory you downloaded the repo to.
 
 `cabal install`
 
-This will install the programs in ~/.cabal/bin
+This will install the program in ~/.cabal/bin
 
 If you add this line to your ~/.profile:
 `PATH=$PATH:~/.cabal/bin`
-you will be able to run the programs from any bash shell.
+you will be able to run the program from any bash shell.
 
-Otherwise, you will have to invoke them with ~/.cabal/bin/r34Downloader
+Otherwise, you will have to invoke it with ~/.cabal/bin/sdl-game-wip
 
 #### Running the program
 
