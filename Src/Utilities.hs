@@ -1,77 +1,23 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Utilities where
 
-import Data.Time
-import SDL
-import SDL.TTF.FFI
 import Foreign.C
+import SDL
+import Data.Time
+import Constant
 import Control.Lens
-import System.Random
-import qualified SDL.Raw as Raw
+import State
 
-data Game = Game {
-    _fpsState :: FPSCounterState,
-    _world :: World,
-    _surfaces :: Surfaces,
-    _upBlocks :: [Block],
-    _downBlocks :: [Block],
-    _heliPosition :: Point V2 CInt,
-    _lastUpdateTime :: UTCTime,
-    _lastScreenUpdateTime :: UTCTime,
-    _score :: Int,
-    _dead :: Bool,
-    _exit :: Bool
-}
+minHeight :: World -> CInt
+minHeight world'
+    | preferred < 0 = 0
+    | otherwise = preferred
+    where preferred = (world'^.screenHeight) `div` 2 - (heliSize * 3)
 
-data FPSCounterState = FPSCounterState {
-    _oldTime :: UTCTime,
-    _lastFPSUpdateTime :: UTCTime
-}
-
-data Surfaces = Surfaces {
-    _screenSurface :: Surface,
-    _bgSurface :: Surface,
-    _boxSurface :: Surface,
-    _fontSurface :: Surface,
-    _blockSurface :: Surface,
-    _menuBGSurface :: Surface,
-    _deadBGSurface :: Surface
-}
-
-data World = World {
-    _mainWindow :: Window,
-    _font :: TTFFont,
-    _refreshRate :: NominalDiffTime,
-    _screenWidth :: CInt,
-    _screenHeight :: CInt,
-    _screenSize :: V2 CInt
-}
-
-data Block = Block {
-    _size :: Rectangle CInt,
-    _position :: Point V2 CInt
-}
-
-makeLenses ''Game
-makeLenses ''FPSCounterState
-makeLenses ''Surfaces
-makeLenses ''World
-makeLenses ''Block
-
-randomBlockHeight :: IO CInt
-randomBlockHeight = getStdRandom (randomR (minHeight'', maxHeight''))
-
-makeRectangle :: CInt -> Rectangle CInt
-makeRectangle x = Rectangle (P $ V2 0 0) (V2 blockWidth x)
-
-minHeight'' :: (Num a) => a
-minHeight'' = 100
-
-maxHeight'' :: (Num a) => a
-maxHeight'' = 250
-
-blockWidth :: CInt
-blockWidth = 40
+maxHeight :: World -> CInt
+maxHeight world'
+    | preferred < 0 = 0
+    | otherwise = preferred
+    where preferred = (world'^.screenHeight) `div` 2 - heliSize
 
 windowClosed :: [Event] -> Bool
 windowClosed [] = False
@@ -85,18 +31,6 @@ keysPressed event keys = case eventPayload event of
         keyboardEventKeyMotion keyboardEvent == Pressed &&
         keysymScancode (keyboardEventKeysym keyboardEvent) `elem` keys
     _ -> False
-
-boxMovementMultiplier :: CInt
-boxMovementMultiplier = 30
-
-upKeys :: [Scancode]
-upKeys = [ScancodeW, ScancodeUp]
-
-startKeys :: [Scancode]
-startKeys = [ScancodeReturn]
-
-quitKeys :: [Scancode]
-quitKeys = [ScancodeQ]
 
 fps :: UTCTime -> IO (UTCTime, Double)
 fps oldTime' = do
@@ -112,80 +46,11 @@ shouldRun lastUpdated interval = do
         then return Nothing
         else return $ Just newTime
 
-fpsCounterUpdateDelay :: NominalDiffTime
---seconds between the fps counter updates
-fpsCounterUpdateDelay = 1
-
-movementDelay :: NominalDiffTime
---seconds between game logic updates, i.e. moving objects etc
-movementDelay = 0.01
-
-titaniumWhite :: Raw.Color
-titaniumWhite = Raw.Color 255 255 255 0
-
-fpsCounterFontSize :: Int
-fpsCounterFontSize = 32
-
 midpoint :: (Integral a) => V2 a -> Point V2 a
 midpoint (V2 x y) = P $ V2 (x `div` 2) (y `div` 2)
-
-bgLocation :: String
-bgLocation = "../Assets/background.jpg"
-
-boxLocation :: String
-boxLocation = "../Assets/box.jpg"
-
-blockLocation :: String
-blockLocation = "../Assets/block.jpg"
-
-menuBGLocation :: String
-menuBGLocation = "../Assets/menuBG.jpg"
-
-deadBGLocation :: String
-deadBGLocation = "../Assets/deadBG.jpg"
-
-getPrimaryDisplay :: [Display] -> Maybe Display
-getPrimaryDisplay [] = Nothing
-getPrimaryDisplay (x:xs)
-    | displayBoundsPosition x == P (V2 0 0) = Just x
-    | otherwise = getPrimaryDisplay xs
-
-getMaxRefreshRate :: [Display] -> CInt
-getMaxRefreshRate displays
-    --unspecified or not found
-    | null refreshRates || maximum refreshRates == 0 = 60
-    | otherwise = maximum refreshRates
-    where refreshRates = map highestRefreshRate displays
-
-highestRefreshRate :: Display -> CInt
-highestRefreshRate display = maximum refreshRates
-    where resolution = displayBoundsSize display
-          currentRes x = displayModeSize x == resolution
-          validDisplayModes = filter currentRes $ displayModes display
-          refreshRates = map displayModeRefreshRate validDisplayModes
 
 --give this a better name / find if there's a library function
 myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
 myRepeat 0 _ final = final
 myRepeat n f old = let new = f old
                    in  myRepeat (n-1) f new 
-
-makeBlock :: World -> CInt -> CInt -> Bool -> Block
-makeBlock world' height startWidth up
-    | up = Block (makeRectangle height) (P $ V2 startWidth ((world'^.screenHeight) - height))
-    | otherwise = Block (makeRectangle height) (P $ V2 startWidth 0)
-
-deadMessage :: String
-deadMessage = "You died! Hit enter to play again, or q to quit."
-
-menuMessage :: String
-menuMessage = "Hit enter to start the game!"
-
-charLength :: CInt
-charLength = 13
-
-charHeight :: CInt
-charHeight = 20
-
-scoreWhiteSpace :: CInt
-scoreWhiteSpace = 18
