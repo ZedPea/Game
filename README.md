@@ -1,4 +1,4 @@
-# sdl-game-wip
+# helicopter-game
 
 Helicopter game where you fly through a tunnel, avoiding the blocks.
 
