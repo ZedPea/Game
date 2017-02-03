@@ -10,6 +10,7 @@ import Display
 import Init
 import Utilities
 import Screen
+import Paths_helicopter_game
 
 main :: IO ()
 main = do
@@ -24,18 +25,22 @@ main = do
     screenSize'@(V2 width height) <- surfaceDimensions screenSurface'
     surfacePixelFormat <- surfaceFormat screenSurface'
 
-    bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load bgLocation
-    boxSurface' <- (`convertSurface` surfacePixelFormat) =<< load boxLocation
-    blockSurface' <- (`convertSurface` surfacePixelFormat)
-                  =<< load blockLocation
-    menuBGSurface' <- load menuBGLocation
-    deadBGSurface' <- load deadBGLocation
+    bgSurface' <- (`convertSurface` surfacePixelFormat) =<< load
+               =<< getDataFileName bgLocation
+    heliSurface' <- (`convertSurface` surfacePixelFormat) =<< load
+                 =<< getDataFileName heliLocation
+    blockSurface' <- (`convertSurface` surfacePixelFormat) =<< load
+                  =<< getDataFileName blockLocation
+    menuBGSurface' <- load =<< getDataFileName menuBGLocation
+    deadBGSurface' <- load =<< getDataFileName deadBGLocation
 
-    font' <- openFont "../Fonts/arial.ttf" fontSize
+    fonty <- getDataFileName fontLocation
+    font' <- openFont fonty fontSize
     fontSurface' <- renderUTF8Solid font' "0" titaniumWhite
 
-    let surfaces' = Surfaces screenSurface' bgSurface' boxSurface' fontSurface'
-                             blockSurface' menuBGSurface' deadBGSurface'
+    let surfaces' = Surfaces screenSurface' bgSurface' heliSurface'
+                             fontSurface' blockSurface' menuBGSurface'
+                             deadBGSurface'
         world' = World window font' (1 / realToFrac refreshRate') width height
                        screenSize'
 

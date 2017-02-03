@@ -2,6 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                helicopter-game
+data-files:	     Assets/background.jpg Assets/block.jpg Assets/deadBG.jpg Assets/heli.jpg Assets/menuBG.jpg Fonts/arial.ttf
 version:             0.1.0.0
 synopsis:            A simple dodge the blocks helicopter game
 license:             BSD3
@@ -14,10 +15,10 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
-executable sdl-game-wip
+executable helicopter-game
   hs-source-dirs:      Src
   main-is:             helicopter-game.hs
-  -- other-modules:       
+  other-modules:       Paths_helicopter_game
   other-extensions:    TemplateHaskell
   build-depends:       base >=4.9 && <4.10, sdl2 >=2.1 && <2.2, sdl2-ttf >=1.0 && <1.1, lens >=4.15 && <4.16, time >=1.6 && <1.7, sdl2-image, random
   -- hs-source-dirs:      

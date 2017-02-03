@@ -44,20 +44,20 @@ updatePositions state = do
             if windowClosed events
                 then return $ state & exit .~ True
                 else checkCollisions <$> (updateBlocks . updateTime $
-                        updateBox state events)
+                        updateHeli state events)
 
 updatePos :: (Num a) => Point V2 a -> a -> a -> Point V2 a
 updatePos (P (V2 x y)) x' y' = P $ V2 (x + x') (y + y')
 
-updateBox :: Game -> [Event] -> Game
-updateBox state events
-    | not $ null upEvents = moveBox events newState
+updateHeli :: Game -> [Event] -> Game
+updateHeli state events
+    | not $ null upEvents = moveHeli events newState
     | otherwise = newState
     where newState = moveDown state
           upEvents = filter (`keysPressed` upKeys) events
 
-moveBox :: [Event] -> Game -> Game
-moveBox events = myRepeat (length events) moveUp
+moveHeli :: [Event] -> Game -> Game
+moveHeli events = myRepeat (length events) moveUp
 
 moveDown :: Game -> Game
 moveDown state = state & heliPosition .~ newPos
@@ -66,7 +66,7 @@ moveDown state = state & heliPosition .~ newPos
 moveUp :: Game -> Game
 moveUp state = state & heliPosition .~ newPos
     where newPos = updatePos (state^.heliPosition) 0
-                    (-1 * boxMovementMultiplier)
+                    (-1 * heliMovementMultiplier)
 
 updateBlocks :: Game -> IO Game
 updateBlocks state = do

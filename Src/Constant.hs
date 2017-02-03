@@ -8,8 +8,8 @@ import qualified SDL.Raw as Raw
 blockWidth :: CInt
 blockWidth = 40
 
-boxMovementMultiplier :: CInt
-boxMovementMultiplier = 20
+heliMovementMultiplier :: CInt
+heliMovementMultiplier = 20
 
 upKeys :: [Scancode]
 upKeys = [ScancodeW]
@@ -35,26 +35,28 @@ fontSize :: Int
 fontSize = 32
 
 bgLocation :: String
-bgLocation = "../Assets/background.jpg"
+bgLocation = "Assets/background.jpg"
 
-boxLocation :: String
-boxLocation = "../Assets/box.jpg"
+heliLocation :: String
+heliLocation = "Assets/heli.jpg"
 
 blockLocation :: String
-blockLocation = "../Assets/block.jpg"
+blockLocation = "Assets/block.jpg"
 
 menuBGLocation :: String
-menuBGLocation = "../Assets/menuBG.jpg"
+menuBGLocation = "Assets/menuBG.jpg"
 
 deadBGLocation :: String
-deadBGLocation = "../Assets/deadBG.jpg"
+deadBGLocation = "Assets/deadBG.jpg"
+
+fontLocation :: String
+fontLocation = "Fonts/arial.ttf"
 
 deadMessage :: String
 deadMessage = "You died! Hit enter to play again, or q to quit."
 
 menuMessage :: String
-menuMessage = "Helicopter game! Use W to fly, don't hit the blocks! \
-               \Hit enter to start the game!"
+menuMessage = "Hit enter to start the game! Use W to fly!"
 
 charLength :: CInt
 charLength = 13
@@ -68,3 +70,5 @@ scoreWhiteSpace = 18
 --100 * 100 pixels
 heliSize :: CInt
 heliSize = 100
+
+maxMessageLength = 20

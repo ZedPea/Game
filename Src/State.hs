@@ -30,7 +30,7 @@ data FPSCounterState = FPSCounterState {
 data Surfaces = Surfaces {
     _screenSurface :: Surface,
     _bgSurface :: Surface,
-    _boxSurface :: Surface,
+    _heliSurface :: Surface,
     _fontSurface :: Surface,
     _blockSurface :: Surface,
     _menuBGSurface :: Surface,

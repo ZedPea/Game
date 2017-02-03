@@ -30,7 +30,7 @@ updateScreen state = do
         then return state
         else do
             writeToScreen state bgSurface 
-            writeToScreenWithPos state boxSurface (state^.heliPosition)
+            writeToScreenWithPos state heliSurface (state^.heliPosition)
             writeBlocks state
             writeScore state
             writeToScreen state fontSurface

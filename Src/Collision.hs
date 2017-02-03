@@ -19,4 +19,4 @@ checkCollisions state
 collides :: Rectangle CInt -> Rectangle CInt -> Bool
 collides (Rectangle (P (V2 a b)) (V2 c d))
          (Rectangle (P (V2 a' b')) (V2 c' d')) =
-         not $ d < b' || b > d' || c < a' || a > c
+         not $ d < b' || b > d' || c < a' || a > c'
