@@ -4,6 +4,7 @@ import SDL
 import Foreign.C
 import Control.Lens
 import System.Random
+import Data.Tuple
 import State
 import Constant
 import Utilities
@@ -29,34 +30,52 @@ addAndRemoveBlocks state up down
           neededBlocks = 1 + state^.world.screenWidth `div` blockWidth
           blockLen = length up + length down
 
-addBlocks :: Game -> [Block] -> [Block] -> IO ([Block], [Block])
-addBlocks state up down = do
-    height <- randomBlockHeight (state^.world)
-    height2 <- randomBlockHeight (state^.world)
-    if length up + length down == 0
-        then let newUp = makeBlock (state^.world) 
-                         (fromIntegral $ neededBlocks * blockWidth) height
-                         True
-                 newDown = makeBlock (state^.world)
-                           (fromIntegral $ neededBlocks * blockWidth) height2
-                           False
-             in  return (up ++ [newUp], down ++ [newDown])
-        else let newUp = makeBlock (state^.world) x' height True
-                 newDown = makeBlock (state^.world) x' height2 False
-             in  return (up ++ [newUp], down ++ [newDown])
-    where (P (V2 x _)) = last up^.position
-          x' = x + blockWidth
-          neededBlocks = 1 + (state^.world.screenWidth) `div` blockWidth
-
-makeBlock :: World -> CInt -> CInt -> Bool -> Block
-makeBlock world' startWidth height up
-    | up = Block (makeRectangle height) (P $ V2 startWidth startHeight)
-    | otherwise = Block (makeRectangle height) (P $ V2 startWidth 0)
-    where startHeight = (world'^.screenHeight) - height
-
 makeRectangle :: CInt -> Rectangle CInt
 makeRectangle blockHeight = Rectangle (P $ V2 0 0) (V2 blockWidth blockHeight)
 
-randomBlockHeight :: World -> IO CInt
-randomBlockHeight world' = getStdRandom (randomR (minHeight world',
-                                                  maxHeight world'))
+makeUpAndDownBlock :: Game -> CInt -> IO (Block, Block)
+makeUpAndDownBlock state startWidth = do
+    (upHeight, downHeight) <- randomHeights state
+    let startHeight = (state^.world.screenHeight) - upHeight
+        up = Block (makeRectangle upHeight) (P $ V2 startWidth startHeight)
+        down = Block (makeRectangle downHeight) (P $ V2 startWidth 0)
+    return (up, down)
+
+addBlocks :: Game -> [Block] -> [Block] -> IO ([Block], [Block])
+addBlocks state up down
+    | length up + length down == 0 = do
+        (newUp, newDown) <- makeUpAndDownBlock state startWidth
+        return ([newUp], [newDown])
+    | otherwise = do
+        (newUp, newDown) <- makeUpAndDownBlock state (x + blockWidth)
+        return (up ++ [newUp], down ++ [newDown])
+    where neededBlocks = 1 + (state^.world.screenWidth) `div` blockWidth
+          startWidth = fromIntegral $ neededBlocks * blockWidth
+          (P (V2 x _)) = last up^.position
+
+randomHeights :: Game -> IO (CInt, CInt)
+randomHeights state
+    | length (state^.upBlocks) + length (state^.downBlocks) == 0 = do
+        first <- getStdRandom (randomR (0, scrHeight - heliHeight))
+        second <- getStdRandom (randomR (0, scrHeight - first -
+                                         (heliHeight * 3)))
+        return (first, second)
+    | otherwise = do
+        let (Rectangle (P (V2 _ _)) (V2 _ upHeight))
+                = last (state^.upBlocks)^.size
+            (Rectangle (P (V2 _ _)) (V2 _ downHeight))
+                = last (state^.downBlocks)^.size
+        up <- getStdRandom (randomR (True, False))
+        if up
+            then gen scrHeight upHeight downHeight
+            else swap <$> gen scrHeight downHeight upHeight
+    where scrHeight = state^.world.screenHeight
+
+gen :: CInt -> CInt -> CInt -> IO (CInt, CInt)
+gen scrHeight firstHeight secondHeight = do
+    let firstMaxHeight = clamp firstHeight $ scrHeight - secondHeight
+                                                       - (heliHeight * 3)
+        secondMaxHeight = scrHeight - firstMaxHeight - (heliHeight * 3)
+    first <- getStdRandom (randomR (0, firstMaxHeight))
+    second <- getStdRandom (randomR (0, clamp secondHeight secondMaxHeight))
+    return (first, second)

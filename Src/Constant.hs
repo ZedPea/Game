@@ -67,8 +67,11 @@ charHeight = 20
 scoreWhiteSpace :: CInt
 scoreWhiteSpace = 18
 
---100 * 100 pixels
-heliSize :: CInt
-heliSize = 100
+heliHeight :: CInt
+heliHeight = 50
 
-maxMessageLength = 20
+heliLength :: CInt
+heliLength = 80
+
+maxIncrement :: (Num a) => a
+maxIncrement = 150

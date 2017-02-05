@@ -21,5 +21,5 @@ reInit state = initialState heliPos (state^.surfaces) (state^.world)
     where heliPos = heliPosInit $ midpoint (state^.world.screenSize)
 
 heliPosInit :: Point V2 CInt -> Point V2 CInt
-heliPosInit (P (V2 width height)) = P $ V2 (width - (heliSize `div` 2))
-                                           (height - (heliSize `div` 2))
+heliPosInit (P (V2 width height)) = P $ V2 (width - (heliLength `div` 2))
+                                           (height - (heliHeight `div` 2))

@@ -13,7 +13,7 @@ checkCollisions state
     | otherwise = state
     where (P (V2 x y)) = state^.heliPosition
           heli = Rectangle (P $ V2 x y)
-                           (V2 (x + heliSize) (y + heliSize))
+                           (V2 (x + heliLength) (y + heliHeight))
           collision = any (collides heli) (blockRectangles state)
 
 collides :: Rectangle CInt -> Rectangle CInt -> Bool

@@ -11,13 +11,13 @@ minHeight :: World -> CInt
 minHeight world'
     | preferred < 0 = 0
     | otherwise = preferred
-    where preferred = (world'^.screenHeight) `div` 2 - (heliSize * 3)
+    where preferred = (world'^.screenHeight) `div` 2 - (heliHeight * 3)
 
 maxHeight :: World -> CInt
 maxHeight world'
     | preferred < 0 = 0
     | otherwise = preferred
-    where preferred = (world'^.screenHeight) `div` 2 - heliSize
+    where preferred = (world'^.screenHeight) `div` 2 - heliHeight
 
 windowClosed :: [Event] -> Bool
 windowClosed [] = False
@@ -54,3 +54,9 @@ myRepeat :: (Num a, Eq a) => a -> (b -> b) -> b -> b
 myRepeat 0 _ final = final
 myRepeat n f old = let new = f old
                    in  myRepeat (n-1) f new 
+
+clamp :: (Ord a, Num a) => a -> a -> a
+clamp old new
+    | new < 0 = 0
+    | new >= old + maxIncrement = old + maxIncrement
+    | otherwise = new
