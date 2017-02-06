@@ -22,7 +22,7 @@ quitKeys = [ScancodeQ]
 
 --seconds between the fps counter updates
 fpsCounterUpdateDelay :: NominalDiffTime
-fpsCounterUpdateDelay = 1
+fpsCounterUpdateDelay = 200
 
 --seconds between game logic updates, i.e. moving objects etc
 movementDelay :: NominalDiffTime
@@ -38,7 +38,7 @@ bgLocation :: String
 bgLocation = "Assets/background.jpg"
 
 heliLocation :: String
-heliLocation = "Assets/heli.jpg"
+heliLocation = "Assets/heli.png"
 
 blockLocation :: String
 blockLocation = "Assets/block.jpg"
@@ -68,10 +68,10 @@ scoreWhiteSpace :: CInt
 scoreWhiteSpace = 18
 
 heliHeight :: CInt
-heliHeight = 50
+heliHeight = 63
 
 heliLength :: CInt
-heliLength = 80
+heliLength = 104
 
 maxIncrement :: (Num a) => a
 maxIncrement = 150

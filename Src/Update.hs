@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Update where
 
 import Control.Lens
@@ -12,13 +14,14 @@ import Collision
 
 updateFPSCounter :: Game -> IO Game
 updateFPSCounter state = do
-    (newTime, fps') <- fps $ state^.fpsState.oldTime
+    (newTime, !fps') <- fps $ state^.fpsState.oldTime
 
     maybeNewFPSUpdateTime <- shouldRun (state^.fpsState.lastFPSUpdateTime)
                              fpsCounterUpdateDelay
 
     case maybeNewFPSUpdateTime of
         Just newFPSUpdateTime -> do
+            SDL.freeSurface (state^.surfaces.fontSurface)
             fontSurface' <- renderUTF8Solid (state^.world.font)
                             ("FPS: " ++ show (round fps')) titaniumWhite
 
@@ -70,11 +73,11 @@ moveUp state = state & heliPosition .~ newPos
 
 updateBlocks :: Game -> IO Game
 updateBlocks state = do
-    (newUp, newDown) <- addAndRemoveBlocks state (newState^.upBlocks)
-                                                 (newState^.downBlocks)
+    let newState = state & (upBlocks.traversed.position) %~
+                                (\x -> updatePos x (-1) 0)
+                         & (downBlocks.traversed.position) %~
+                                (\x -> updatePos x (-1) 0)
+    (newUp, newDown) <- addAndRemoveBlocks newState (newState^.upBlocks)
+                                                    (newState^.downBlocks)
     return $ newState & upBlocks .~ newUp
-             & downBlocks .~ newDown
-    where newState = state & (upBlocks.traversed.position) %~
-                                (\x -> updatePos x (-1) 0)
-                           & (downBlocks.traversed.position) %~
-                                (\x -> updatePos x (-1) 0)
+                      & downBlocks .~ newDown
