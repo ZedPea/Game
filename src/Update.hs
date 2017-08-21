@@ -28,17 +28,20 @@ moveHeliDown :: Game -> Game
 moveHeliDown = moveHeli 1
 
 moveHeli :: Double -> Game -> Game
-moveHeli n state = state & heliPosition.bottomLeft.y +~ n
-                         & heliPosition.bottomRight.y +~ n
-                         & heliPosition.topLeft.y +~ n
-                         & heliPosition.topRight.y +~ n
+moveHeli n state = state & moveHeli' bottomLeft
+                         & moveHeli' bottomRight
+                         & moveHeli' topLeft
+                         & moveHeli' topRight
+    where moveHeli' pos = heliPosition.pos.y +~ n
 
 moveBlocks :: Game -> Game
 moveBlocks state = 
-    state & blocks.blockPairs.traversed.both.bottomLeft.x -~ (state^.speed)
-          & blocks.blockPairs.traversed.both.bottomRight.x -~ (state^.speed)
-          & blocks.blockPairs.traversed.both.topLeft.x -~ (state^.speed)
-          & blocks.blockPairs.traversed.both.topRight.x -~ (state^.speed)
+    state & moveBlock bottomLeft
+          & moveBlock bottomRight
+          & moveBlock topLeft
+          & moveBlock topRight
+    where moveBlock pos = blocks.blockPairs.traversed.both.pos.x -~ 
+                          (state^.speed)
 
 addAndRemoveBlocks :: Game -> IO Game
 addAndRemoveBlocks state

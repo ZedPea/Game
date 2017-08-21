@@ -6,7 +6,7 @@ where
 
 import SDL (V2(..), quit, initializeAll, createWindow, defaultWindow,
             getWindowSurface, surfaceDimensions, surfaceFormat, convertSurface,
-            pollEvents)
+            pollEvents, freeSurface)
 
 import SDL.Image (load)
 import SDL.TTF as Font (init, quit, openFont)
@@ -17,6 +17,7 @@ import Data.Time.Clock (getCurrentTime)
 import Control.Concurrent (forkIO, killThread, threadDelay)
 import Control.Concurrent.MVar (MVar, readMVar, modifyMVar_)
 import Data.Text (empty)
+import Control.DeepSeq (force)
 
 import State (Game, Surfaces(..), World(..), dead, frames, latestFrameTime, 
               previousFrameTime, fps, score, speed)
@@ -59,6 +60,9 @@ main = do
 
     mainLoop stateMVar
 
+    freeSurface screenSurface'
+    freeSurface heliSurface'
+
     Font.quit
     SDL.quit
 
@@ -86,7 +90,7 @@ mainLoop stateMVar = do
             reDrawScreen stateMVar 
 
             events <- pollEvents
-            state <- readMVar stateMVar
+            state <- force <$> readMVar stateMVar
 
             handleUpPress stateMVar events
 

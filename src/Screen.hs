@@ -6,7 +6,7 @@ module Screen
 where
 
 import SDL (Surface, Point(..), V2(..), V4(..), surfaceBlit, surfaceFillRect,
-            updateWindowSurface, surfaceFillRects)
+            updateWindowSurface, surfaceFillRects, freeSurface)
 
 import SDL.TTF (renderUTF8Solid)
 
@@ -15,6 +15,7 @@ import Control.Lens (Const, (^.))
 import Data.List (genericLength)
 import Control.Concurrent.MVar (MVar, readMVar)
 import Data.Vector.Storable (fromList)
+import Control.Exception.Base (bracket)
 
 import State (Game, Surfaces, world, font, surfaces, screenSurface, mainWindow,
               screenWidth, screenHeight, heliSurface, heliPosition,
@@ -61,9 +62,10 @@ writeToScreenWithPos s source pos = surfaceBlit (s^.surfaces.source) Nothing
                                     (s^.surfaces.screenSurface) (Just pos)
 
 writeScore :: Game -> IO ()
-writeScore state = do
-    fontSurface <- renderUTF8Solid (state^.world.font) msg titaniumWhite
-    surfaceBlit fontSurface Nothing (state^.surfaces.screenSurface) (Just pos)
+writeScore state = bracket
+    (renderUTF8Solid (state^.world.font) msg titaniumWhite)
+     freeSurface
+    (\f -> surfaceBlit f Nothing (state^.surfaces.screenSurface) (Just pos))
     where pos = P $ V2 (round $ startPos - lengthDiff) 0
 
           --as the score grows in digits, draw it so the score doesn't clip
@@ -84,7 +86,8 @@ writeBlocks state = surfaceFillRects (state^.surfaces.screenSurface)
           colour = V4 192 192 192 0
 
 writeFPS :: Game -> IO ()
-writeFPS state = do
-    fontSurface <- renderUTF8Solid (state^.world.font) msg titaniumWhite
-    surfaceBlit fontSurface Nothing (state^.surfaces.screenSurface) Nothing
+writeFPS state = bracket 
+    (renderUTF8Solid (state^.world.font) msg titaniumWhite)
+     freeSurface
+    (\f -> surfaceBlit f Nothing (state^.surfaces.screenSurface) Nothing)
     where msg = "FPS: " ++ show (state^.frames.fps)

@@ -12,8 +12,8 @@ where
 
 
 import SDL (Event, EventPayload(..), Scancode, V2(..), Point(..),
-            InputMotion(..), Rectangle(..), eventPayload, keyboardEventKeyMotion, 
-            keysymScancode, keyboardEventKeysym)
+            InputMotion(..), Rectangle(..), eventPayload, keysymScancode,
+            keyboardEventKeyMotion, keyboardEventKeysym)
 
 import Data.Time (UTCTime, diffUTCTime)
 import Foreign.C (CInt)
