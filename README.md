@@ -6,6 +6,8 @@ Use Enter to start the game. Hold W to fly up. Use q to quit once you have crash
 
 Currently has a memory leak, lol
 
+![Gif of gameplay](game.gif?raw=true "Game gif")
+
 ## Installation:
 
 #### Install prerequistes
